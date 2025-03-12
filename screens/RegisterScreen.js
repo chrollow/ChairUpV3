@@ -83,7 +83,7 @@ const RegisterScreen = ({ navigation }) => {
     }
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     // Basic validation
     if (!email || !name || !phone || !password || !confirmPassword) {
       setError('Please fill in all fields');
@@ -100,29 +100,38 @@ const RegisterScreen = ({ navigation }) => {
       return;
     }
     
-    // For demo, we'll just store in AsyncStorage
-    // In production, you would send this to your API
     try {
-      const userData = {
+      // Get existing users or initialize empty array
+      const existingUsersJson = await AsyncStorage.getItem('registeredUsers');
+      const existingUsers = existingUsersJson ? JSON.parse(existingUsersJson) : [];
+      
+      // Check if email already exists
+      const emailExists = existingUsers.some(user => user.email.toLowerCase() === email.toLowerCase());
+      if (emailExists) {
+        setError('Email already registered');
+        return;
+      }
+      
+      // Create new user object (including password for authentication)
+      const newUser = {
         name,
         email,
         phone,
+        password, // In a real app, this would be hashed
         profileImage: image
       };
       
-      AsyncStorage.setItem('userData', JSON.stringify(userData));
-      AsyncStorage.setItem('userToken', 'dummy-auth-token');
+      // Add to users array and save back to storage
+      existingUsers.push(newUser);
+      await AsyncStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
       
       Alert.alert(
         "Registration Successful",
         "You have successfully registered!",
         [
           { text: "OK", onPress: () => {
-            // Navigate to Home screen
-            navigation.reset({
-              index: 0,
-              routes: [{ name: 'Home' }],
-            });
+            // Navigate back to Login screen instead of directly to Home
+            navigation.navigate('Login');
           }}
         ]
       );

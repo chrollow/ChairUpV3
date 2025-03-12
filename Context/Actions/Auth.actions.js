@@ -3,34 +3,50 @@ import { Alert } from "react-native";
 
 export const SET_CURRENT_USER = "SET_CURRENT_USER";
 
-export const loginUser = (user, dispatch) => {
-  // For demo purposes we'll use AsyncStorage directly
-  // In production, you'd call your API here
+export const loginUser = async (user, dispatch) => {
   if (user.email && user.password) {
     try {
-      // Store token and user data
-      AsyncStorage.setItem('userToken', 'dummy-auth-token');
-      AsyncStorage.setItem('userData', JSON.stringify({
-        email: user.email,
-        name: 'Demo User' // In a real app, this would come from your API response
-      }));
+      // Get the registered users from storage
+      const usersJson = await AsyncStorage.getItem('registeredUsers');
+      const users = usersJson ? JSON.parse(usersJson) : [];
       
-      // Update context
-      dispatch({
-        type: SET_CURRENT_USER,
-        payload: {
-          isAuthenticated: true,
-          user: {
-            email: user.email,
-            name: 'Demo User'
+      // Find the user by email
+      const foundUser = users.find(u => u.email.toLowerCase() === user.email.toLowerCase());
+      
+      if (foundUser && foundUser.password === user.password) {
+        // Valid credentials - store token and user data
+        await AsyncStorage.setItem('userToken', 'auth-token-' + foundUser.email);
+        await AsyncStorage.setItem('userData', JSON.stringify({
+          email: foundUser.email,
+          name: foundUser.name,
+          phone: foundUser.phone,
+          profileImage: foundUser.profileImage
+        }));
+        
+        // Update context
+        dispatch({
+          type: SET_CURRENT_USER,
+          payload: {
+            isAuthenticated: true,
+            user: {
+              email: foundUser.email,
+              name: foundUser.name
+            }
           }
-        }
-      });
+        });
+        
+        return true;
+      } else {
+        Alert.alert("Error", "Invalid email or password");
+        return false;
+      }
     } catch (error) {
       Alert.alert("Error", "Login failed. Please try again.");
+      return false;
     }
   } else {
     Alert.alert("Error", "Please provide your credentials");
+    return false;
   }
 };
 

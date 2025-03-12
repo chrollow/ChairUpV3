@@ -3,15 +3,16 @@ import {
   StyleSheet, 
   Text, 
   View, 
-  Button,
+  Button, 
   KeyboardAvoidingView,
   Platform,
-  Image
+  Image,
 } from 'react-native';
 import FormContainer from './Shared/FormContainer';
 import Input from './Shared/Input';
 import { AuthContext } from '../Context/Store/AuthGlobal';
 import { loginUser } from '../Context/Actions/Auth.actions';
+import { Camera } from 'expo-camera';
 
 const LoginScreen = ({ navigation }) => {
   const context = useContext(AuthContext);
@@ -19,7 +20,7 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const user = {
       email,
       password,
@@ -28,7 +29,16 @@ const LoginScreen = ({ navigation }) => {
     if (email === "" || password === "") {
       setError("Please fill in your credentials");
     } else {
-      loginUser(user, context.dispatch);
+      // Remove the error message if previously shown
+      setError("");
+      
+      // loginUser now returns a boolean success value
+      const success = await loginUser(user, context.dispatch);
+      
+      // Navigation will happen via the useEffect that watches isAuthenticated
+      if (!success) {
+        setError("Invalid credentials");
+      }
     }
   };
 
@@ -47,13 +57,10 @@ const LoginScreen = ({ navigation }) => {
         <Image 
           source={require('../assets/chair-logo.png')} 
           style={styles.logo}
-          // If you don't have the image yet, uncomment this line:
-          // style={[styles.logo, {backgroundColor: '#ddd'}]}
         />
         <Text style={styles.title}>ChairUp</Text>
         <Text style={styles.subtitle}>Premium Chair Marketplace</Text>
       </View>
-      
       <FormContainer>
         <Input
           placeholder="Email"
@@ -70,14 +77,13 @@ const LoginScreen = ({ navigation }) => {
           value={password}
           onChangeText={(text) => setPassword(text)}
         />
-        
         {error ? <Text style={styles.error}>{error}</Text> : null}
         
         <View style={styles.buttonGroup}>
           <Button 
             title="Login" 
             onPress={() => handleSubmit()} 
-            color="#4a6da7"
+            color="#4a6da7" 
           />
         </View>
         
@@ -86,7 +92,7 @@ const LoginScreen = ({ navigation }) => {
           <Button 
             title="Register" 
             onPress={() => navigation.navigate("Register")}
-            color="#4a6da7"
+            color="#4a6da7" 
           />
         </View>
       </FormContainer>
@@ -98,6 +104,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   logoContainer: {
     alignItems: 'center',
@@ -121,16 +129,16 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   buttonGroup: {
+    marginBottom: 10,
     width: '80%',
-    marginVertical: 10,
   },
   registerContainer: {
-    width: '80%',
     marginTop: 20,
+    alignItems: 'center',
   },
   middleText: {
     marginBottom: 10,
-    textAlign: 'center',
+    alignSelf: 'center',
   },
   error: {
     color: 'red',
