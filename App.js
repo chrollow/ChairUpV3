@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import HomeScreen from './screens/HomeScreen';
+import AuthGlobal from './Context/Store/AuthGlobal';
 
 const Stack = createStackNavigator();
 
@@ -34,29 +35,31 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator>
-        {userToken == null ? (
-          <>
+    <AuthGlobal>
+      <NavigationContainer>
+        <Stack.Navigator>
+          {userToken == null ? (
+            <>
+              <Stack.Screen 
+                name="Login" 
+                component={LoginScreen} 
+                options={{ title: 'ChairUp - Login' }}
+              />
+              <Stack.Screen 
+                name="Register" 
+                component={RegisterScreen} 
+                options={{ title: 'ChairUp - Register' }}
+              />
+            </>
+          ) : (
             <Stack.Screen 
-              name="Login" 
-              component={LoginScreen} 
-              options={{ title: 'ChairUp - Login' }}
+              name="Home" 
+              component={HomeScreen} 
+              options={{ title: 'ChairUp' }}
             />
-            <Stack.Screen 
-              name="Register" 
-              component={RegisterScreen} 
-              options={{ title: 'ChairUp - Register' }}
-            />
-          </>
-        ) : (
-          <Stack.Screen 
-            name="Home" 
-            component={HomeScreen} 
-            options={{ title: 'ChairUp' }}
-          />
-        )}
-      </Stack.Navigator>
-    </NavigationContainer>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </AuthGlobal>
   );
 }

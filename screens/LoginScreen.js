@@ -1,46 +1,45 @@
-// screens/LoginScreen.js
-import React, { useState } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
   View, 
-  TextInput, 
-  TouchableOpacity, 
-  Image,
+  Button,
   KeyboardAvoidingView,
   Platform,
-  Alert
+  Image
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import FormContainer from './Shared/FormContainer';
+import Input from './Shared/Input';
+import { AuthContext } from '../Context/Store/AuthGlobal';
+import { loginUser } from '../Context/Actions/Auth.actions';
 
 const LoginScreen = ({ navigation }) => {
+  const context = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
-  const handleLogin = async () => {
-    // Basic validation
-    if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
-      return;
-    }
-    
-    // Here you would typically connect to your backend API
-    // For demo purposes, we'll just simulate a successful login
-    try {
-      // Mock login - replace with actual API call
-      await AsyncStorage.setItem('userToken', 'dummy-auth-token');
-      // Force app to re-render by reloading the App component
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      });
-    } catch (error) {
-      Alert.alert('Error', 'Login failed. Please try again.');
+  const handleSubmit = () => {
+    const user = {
+      email,
+      password,
+    };
+
+    if (email === "" || password === "") {
+      setError("Please fill in your credentials");
+    } else {
+      loginUser(user, context.dispatch);
     }
   };
 
+  useEffect(() => {
+    if (context.stateUser.isAuthenticated === true) {
+      navigation.navigate("Home");
+    }
+  }, [context.stateUser.isAuthenticated]);
+
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={styles.container}
     >
@@ -48,42 +47,49 @@ const LoginScreen = ({ navigation }) => {
         <Image 
           source={require('../assets/chair-logo.png')} 
           style={styles.logo}
-          // If you don't have the image yet, comment out the source line above
-          // and uncomment the following line:
+          // If you don't have the image yet, uncomment this line:
           // style={[styles.logo, {backgroundColor: '#ddd'}]}
         />
         <Text style={styles.title}>ChairUp</Text>
         <Text style={styles.subtitle}>Premium Chair Marketplace</Text>
       </View>
       
-      <View style={styles.formContainer}>
-        <TextInput
-          style={styles.input}
+      <FormContainer>
+        <Input
           placeholder="Email"
+          name="email"
+          id="email"
           value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
+          onChangeText={(text) => setEmail(text.toLowerCase())}
         />
-        <TextInput
-          style={styles.input}
+        <Input
           placeholder="Password"
+          name="password"
+          id="password"
+          secureTextEntry={true}
           value={password}
-          onChangeText={setPassword}
-          secureTextEntry
+          onChangeText={(text) => setPassword(text)}
         />
         
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Login</Text>
-        </TouchableOpacity>
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+        
+        <View style={styles.buttonGroup}>
+          <Button 
+            title="Login" 
+            onPress={() => handleSubmit()} 
+            color="#4a6da7"
+          />
+        </View>
         
         <View style={styles.registerContainer}>
-          <Text>Don't have an account? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.registerText}>Register now</Text>
-          </TouchableOpacity>
+          <Text style={styles.middleText}>Don't have an account yet? </Text>
+          <Button 
+            title="Register" 
+            onPress={() => navigation.navigate("Register")}
+            color="#4a6da7"
+          />
         </View>
-      </View>
+      </FormContainer>
     </KeyboardAvoidingView>
   );
 };
@@ -95,8 +101,8 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginTop: 50,
-    marginBottom: 20,
+    marginTop: 40,
+    marginBottom: 10,
   },
   logo: {
     width: 100,
@@ -114,40 +120,22 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 5,
   },
-  formContainer: {
-    paddingHorizontal: 30,
-  },
-  input: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 15,
-    paddingHorizontal: 15,
-    backgroundColor: '#f9f9f9',
-  },
-  button: {
-    backgroundColor: '#4a6da7',
-    height: 50,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+  buttonGroup: {
+    width: '80%',
+    marginVertical: 10,
   },
   registerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    width: '80%',
     marginTop: 20,
   },
-  registerText: {
-    color: '#4a6da7',
-    fontWeight: 'bold',
+  middleText: {
+    marginBottom: 10,
+    textAlign: 'center',
   },
+  error: {
+    color: 'red',
+    marginBottom: 10,
+  }
 });
 
 export default LoginScreen;

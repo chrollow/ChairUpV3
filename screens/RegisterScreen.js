@@ -1,317 +1,256 @@
-// screens/RegisterScreen.js
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
   View, 
-  TextInput, 
   TouchableOpacity, 
-  ScrollView,
   Image,
+  Button,
+  Platform,
   Alert,
-  KeyboardAvoidingView,
-  Platform
+  Dimensions
 } from 'react-native';
-import * as ExpoCamera from 'expo-camera';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Camera } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons';
 
-const Camera = ExpoCamera.Camera;
+import FormContainer from './Shared/FormContainer';
+import Input from './Shared/Input';
+
+var { width } = Dimensions.get("window");
 
 const RegisterScreen = ({ navigation }) => {
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [hasPermission, setHasPermission] = useState(null);
-  const [showCamera, setShowCamera] = useState(false);
-  const [profileImage, setProfileImage] = useState(null);
-  
-  const cameraRef = useRef(null);
+  const [error, setError] = useState('');
+  const [image, setImage] = useState(null);
+  const [mainImage, setMainImage] = useState('');
+  const [hasCameraPermission, setHasCameraPermission] = useState(null);
+  const [location, setLocation] = useState(null);
+  const [locationErrorMsg, setLocationErrorMsg] = useState(null);
 
-  const requestCameraPermission = async () => {
-    try {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-      if (status === 'granted') {
-        setShowCamera(true);
-      } else {
-        Alert.alert('Permission denied', 'Camera permission is required to take a profile picture');
+  useEffect(() => {
+    (async () => {
+      // Request camera permissions
+      const cameraStatus = await Camera.requestCameraPermissionsAsync();
+      setHasCameraPermission(cameraStatus.status === 'granted');
+      
+      // Request location permissions
+      let { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        setLocationErrorMsg('Permission to access location was denied');
+        return;
       }
-    } catch (error) {
-      console.log('Camera permission error:', error);
-      Alert.alert('Error', 'Failed to request camera permission');
+
+      let location = await Location.getCurrentPositionAsync({});
+      setLocation(location);
+    })();
+  }, []);
+
+  const takePhoto = async () => {
+    const c = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (c.status === "granted") {
+      let result = await ImagePicker.launchCameraAsync({
+        aspect: [4, 3],
+        quality: 1,
+      });
+
+      if (!result.canceled) {
+        setMainImage(result.assets[0].uri);
+        setImage(result.assets[0].uri);
+      }
     }
   };
 
-  const takePicture = async () => {
-    if (cameraRef.current) {
-      const photo = await cameraRef.current.takePictureAsync();
-      setProfileImage(photo.uri);
-      setShowCamera(false);
+  const pickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+      setMainImage(result.assets[0].uri);
     }
   };
 
-  const handleRegister = async () => {
+  const handleRegister = () => {
     // Basic validation
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+    if (!email || !name || !phone || !password || !confirmPassword) {
+      setError('Please fill in all fields');
       return;
     }
     
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      setError('Passwords do not match');
       return;
     }
     
-    if (!profileImage) {
-      Alert.alert('Error', 'Please take a profile picture');
+    if (!image) {
+      setError('Please take a profile picture');
       return;
     }
     
-    // Here you would typically connect to your backend API
-    // For demo purposes, we'll just simulate a successful registration
+    // For demo, we'll just store in AsyncStorage
+    // In production, you would send this to your API
     try {
-      // Save profile data - in a real app, send to a backend
       const userData = {
         name,
         email,
-        profileImage
+        phone,
+        profileImage: image
       };
       
-      await AsyncStorage.setItem('userData', JSON.stringify(userData));
-      await AsyncStorage.setItem('userToken', 'dummy-auth-token');
+      AsyncStorage.setItem('userData', JSON.stringify(userData));
+      AsyncStorage.setItem('userToken', 'dummy-auth-token');
       
-      // Navigate to Home screen
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      });
+      Alert.alert(
+        "Registration Successful",
+        "You have successfully registered!",
+        [
+          { text: "OK", onPress: () => {
+            // Navigate to Home screen
+            navigation.reset({
+              index: 0,
+              routes: [{ name: 'Home' }],
+            });
+          }}
+        ]
+      );
     } catch (error) {
       Alert.alert('Error', 'Registration failed. Please try again.');
     }
   };
 
-  // Change to this simpler Camera component usage:
-if (showCamera) {
   return (
-    <View style={styles.cameraContainer}>
-      {hasPermission === true && (
-        <ExpoCamera.Camera 
-          style={styles.camera} 
-          type={1} 
-          ref={cameraRef}
-        >
-          <View style={styles.cameraControls}>
-            <TouchableOpacity 
-              style={styles.cancelButton} 
-              onPress={() => setShowCamera(false)}
-            >
-              <Text style={styles.cameraButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.takePictureButton} 
-              onPress={takePicture}
-            >
-              <Text style={styles.cameraButtonText}>Take Picture</Text>
-            </TouchableOpacity>
-          </View>
-        </ExpoCamera.Camera>
-      )}
-    </View>
-  );
-}
-
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : null}
-      style={styles.keyboardView}
+    <KeyboardAwareScrollView
+      viewIsInsideTabBar={true}
+      extraHeight={200}
+      enableOnAndroid={true}
+      style={{ backgroundColor: '#fff' }}
     >
-      <ScrollView style={styles.container}>
-        <View style={styles.headerContainer}>
-          <Text style={styles.headerText}>Create Account</Text>
-          <Text style={styles.subHeaderText}>Join ChairUp community</Text>
-        </View>
-        
-        <View style={styles.profilePicContainer}>
-          {profileImage ? (
-            <Image source={{ uri: profileImage }} style={styles.profilePic} />
+      <FormContainer title={"Register"}>
+        <View style={styles.imageContainer}>
+          {mainImage ? (
+            <Image source={{ uri: mainImage }} style={styles.image} />
           ) : (
-            <View style={styles.placeholderImage}>
-              <Text style={styles.placeholderText}>No Image</Text>
+            <View style={[styles.image, { backgroundColor: '#ddd', justifyContent: 'center', alignItems: 'center' }]}>
+              <Text style={{ color: '#888' }}>No Image</Text>
             </View>
           )}
-          <TouchableOpacity 
-            style={styles.cameraButton} 
-            onPress={requestCameraPermission}
+          <TouchableOpacity
+            onPress={takePhoto}
+            style={styles.imagePicker}
           >
-            <Text style={styles.cameraButtonText}>
-              {profileImage ? 'Change Photo' : 'Take Photo'}
-            </Text>
+            <Ionicons name="camera" size={18} color="white" />
           </TouchableOpacity>
+        </View>
+
+        <Input
+          placeholder="Email"
+          name="email"
+          id="email"
+          value={email}
+          onChangeText={(text) => setEmail(text.toLowerCase())}
+        />
+        <Input
+          placeholder="Name"
+          name="name"
+          id="name"
+          value={name}
+          onChangeText={(text) => setName(text)}
+        />
+        <Input
+          placeholder="Phone Number"
+          name="phone"
+          id="phone"
+          value={phone}
+          keyboardType="numeric"
+          onChangeText={(text) => setPhone(text)}
+        />
+        <Input
+          placeholder="Password"
+          name="password"
+          id="password"
+          value={password}
+          secureTextEntry={true}
+          onChangeText={(text) => setPassword(text)}
+        />
+        <Input
+          placeholder="Confirm Password"
+          name="confirmPassword"
+          id="confirmPassword"
+          value={confirmPassword}
+          secureTextEntry={true}
+          onChangeText={(text) => setConfirmPassword(text)}
+        />
+
+        {error ? <Text style={styles.error}>{error}</Text> : null}
+
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Register"
+            onPress={handleRegister}
+            color="#4a6da7"
+          />
         </View>
         
-        <View style={styles.formContainer}>
-          <TextInput
-            style={styles.input}
-            placeholder="Full Name"
-            value={name}
-            onChangeText={setName}
+        <View style={styles.buttonContainer}>
+          <Button
+            title="Back to Login"
+            onPress={() => navigation.navigate("Login")}
+            color="#888"
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Email"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
-          
-          <TouchableOpacity style={styles.registerButton} onPress={handleRegister}>
-            <Text style={styles.registerButtonText}>Register</Text>
-          </TouchableOpacity>
-          
-          <View style={styles.loginContainer}>
-            <Text>Already have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-              <Text style={styles.loginText}>Login</Text>
-            </TouchableOpacity>
-          </View>
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </FormContainer>
+    </KeyboardAwareScrollView>
   );
 };
 
 const styles = StyleSheet.create({
-  keyboardView: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginTop: 30,
+  imageContainer: {
+    width: 200,
+    height: 200,
+    borderStyle: "solid",
+    borderWidth: 8,
+    padding: 0,
+    justifyContent: "center",
+    borderRadius: 100,
+    borderColor: "#E0E0E0",
+    elevation: 10,
     marginBottom: 20,
   },
-  headerText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+  image: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 100
   },
-  subHeaderText: {
-    fontSize: 16,
-    color: '#666',
-    marginTop: 5,
+  imagePicker: {
+    position: "absolute",
+    right: 5,
+    bottom: 5,
+    backgroundColor: "grey",
+    padding: 8,
+    borderRadius: 100,
+    elevation: 20
   },
-  profilePicContainer: {
-    alignItems: 'center',
-    marginBottom: 20,
+  buttonContainer: {
+    width: "80%",
+    marginVertical: 10,
   },
-  profilePic: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-  },
-  placeholderImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: '#ddd',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholderText: {
-    color: '#888',
-  },
-  cameraButton: {
-    backgroundColor: '#4a6da7',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 20,
-    marginTop: 10,
-  },
-  cameraButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-  },
-  formContainer: {
-    paddingHorizontal: 30,
-    paddingBottom: 30,
-  },
-  input: {
-    height: 50,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 8,
-    marginBottom: 15,
-    paddingHorizontal: 15,
-    backgroundColor: '#f9f9f9',
-  },
-  registerButton: {
-    backgroundColor: '#4a6da7',
-    height: 50,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 15,
-  },
-  registerButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  loginContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  loginText: {
-    color: '#4a6da7',
-    fontWeight: 'bold',
-  },
-  cameraContainer: {
-    flex: 1,
-  },
-  camera: {
-    flex: 1,
-  },
-  cameraControls: {
-    flex: 1,
-    backgroundColor: 'transparent',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 20,
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-  },
-  takePictureButton: {
-    backgroundColor: '#4a6da7',
-    padding: 15,
-    borderRadius: 10,
-  },
-  cancelButton: {
-    backgroundColor: '#ff6b6b',
-    padding: 15,
-    borderRadius: 10,
-  },
+  error: {
+    color: 'red',
+    marginBottom: 10,
+  }
 });
 
 export default RegisterScreen;
