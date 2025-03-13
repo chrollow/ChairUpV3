@@ -5,9 +5,9 @@ import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
-import HomeScreen from './screens/HomeScreen';
+import MainNavigator from './Navigation/MainNavigator';
 import AuthGlobal, { AuthContext } from './Context/Store/AuthGlobal';
-import { logoutUser } from './Context/Actions/Auth.actions';
+import ProductProvider from './Context/Store/ProductGlobal';
 
 const Stack = createStackNavigator();
 
@@ -36,10 +36,7 @@ const AppNavigator = () => {
             type: 'SET_CURRENT_USER',
             payload: {
               isAuthenticated: true,
-              user: {
-                email: parsedUserData.email,
-                name: parsedUserData.name
-              }
+              user: parsedUserData
             }
           });
         }
@@ -71,11 +68,10 @@ const AppNavigator = () => {
         </>
       ) : (
         <Stack.Screen 
-          name="Home" 
-          component={HomeScreen} 
+          name="Main" 
+          component={MainNavigator} 
           options={{ 
-            title: 'ChairUp',
-            headerLeft: null, // Prevent back navigation
+            headerShown: false
           }}
         />
       )}
@@ -86,9 +82,11 @@ const AppNavigator = () => {
 export default function App() {
   return (
     <AuthGlobal>
-      <NavigationContainer>
-        <AppNavigator />
-      </NavigationContainer>
+      <ProductProvider>
+        <NavigationContainer>
+          <AppNavigator />
+        </NavigationContainer>
+      </ProductProvider>
     </AuthGlobal>
   );
 }
