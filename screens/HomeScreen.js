@@ -1,5 +1,5 @@
 // screens/HomeScreen.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -11,6 +11,8 @@ import {
   StatusBar
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AuthContext } from '../Context/Store/AuthGlobal';
+import { logoutUser } from '../Context/Actions/Auth.actions';
 
 // Sample chair data
 const chairsData = [
@@ -44,8 +46,9 @@ const chairsData = [
   },
 ];
 
-const HomeScreen = ({ navigation }) => {
+const HomeScreen = () => {
   const [userData, setUserData] = useState(null);
+  const { dispatch } = useContext(AuthContext);
   
   useEffect(() => {
     const getUserData = async () => {
@@ -62,17 +65,8 @@ const HomeScreen = ({ navigation }) => {
     getUserData();
   }, []);
 
-  const handleLogout = async () => {
-    try {
-      await AsyncStorage.removeItem('userToken');
-      // Force app to re-render
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Login' }],
-      });
-    } catch (e) {
-      console.log('Failed to logout', e);
-    }
+  const handleLogout = () => {
+    logoutUser(dispatch);
   };
 
   const renderChairItem = ({ item }) => (

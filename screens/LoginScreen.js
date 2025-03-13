@@ -1,4 +1,5 @@
-import React, { useState, useContext, useEffect } from 'react';
+// screens/LoginScreen.js
+import React, { useState, useContext } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -12,10 +13,9 @@ import FormContainer from './Shared/FormContainer';
 import Input from './Shared/Input';
 import { AuthContext } from '../Context/Store/AuthGlobal';
 import { loginUser } from '../Context/Actions/Auth.actions';
-import { Camera } from 'expo-camera';
 
 const LoginScreen = ({ navigation }) => {
-  const context = useContext(AuthContext);
+  const { dispatch } = useContext(AuthContext);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -33,20 +33,14 @@ const LoginScreen = ({ navigation }) => {
       setError("");
       
       // loginUser now returns a boolean success value
-      const success = await loginUser(user, context.dispatch);
+      const success = await loginUser(user, dispatch);
       
-      // Navigation will happen via the useEffect that watches isAuthenticated
       if (!success) {
         setError("Invalid credentials");
       }
+      // No need to navigate - App.js will handle the navigation based on authentication state
     }
   };
-
-  useEffect(() => {
-    if (context.stateUser.isAuthenticated === true) {
-      navigation.navigate("Home");
-    }
-  }, [context.stateUser.isAuthenticated]);
 
   return (
     <KeyboardAvoidingView
