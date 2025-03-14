@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import FormContainer from './Shared/FormContainer';
 import Input from './Shared/Input';
+import GoogleLogin from './Shared/GoogleLogin';
 import { AuthContext } from '../Context/Store/AuthGlobal';
 import { loginUser } from '../Context/Actions/Auth.actions';
 
@@ -40,6 +41,16 @@ const LoginScreen = ({ navigation }) => {
       }
       // No need to navigate - App.js will handle the navigation based on authentication state
     }
+  };
+
+  const handleGoogleLoginSuccess = (userData) => {
+    dispatch({
+      type: 'SET_CURRENT_USER',
+      payload: {
+        isAuthenticated: true,
+        user: userData
+      }
+    });
   };
 
   return (
@@ -80,6 +91,14 @@ const LoginScreen = ({ navigation }) => {
             color="#4a6da7" 
           />
         </View>
+        
+        <View style={styles.orContainer}>
+          <View style={styles.divider} />
+          <Text style={styles.orText}>OR</Text>
+          <View style={styles.divider} />
+        </View>
+        
+        <GoogleLogin onLoginSuccess={handleGoogleLoginSuccess} />
         
         <View style={styles.registerContainer}>
           <Text style={styles.middleText}>Don't have an account yet? </Text>
@@ -137,6 +156,21 @@ const styles = StyleSheet.create({
   error: {
     color: 'red',
     marginBottom: 10,
+  },
+  orContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 15,
+    width: '80%',
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#ddd',
+  },
+  orText: {
+    paddingHorizontal: 10,
+    color: '#666',
   }
 });
 

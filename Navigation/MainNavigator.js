@@ -3,7 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import HomeScreen from '../screens/HomeScreen';
 import ProductNavigator from './ProductNavigator';
-// import ProfileScreen from '../screens/Profile/ProfileScreen';
+import ProfileScreen from '../screens/Profile/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
@@ -44,11 +44,11 @@ const MainNavigator = () => {
           title: 'Chairs'
         }}
       />
-      {/* <Tab.Screen 
+      <Tab.Screen 
         name="Profile" 
         component={ProfileScreen} 
         options={{ title: 'My Profile' }}
-      /> */}
+      />
     </Tab.Navigator>
   );
 };

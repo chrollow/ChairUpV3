@@ -30,7 +30,13 @@
         {
           "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera."
         }
-      ]
-    ]
+      ],
+      "expo-secure-store"
+    ],
+    "scheme": "chairup",
+    "owner": "donn_baldoza",
+    "extra": {
+      "googleClientId": "562957089179-v0glkbdo2sc169prvf84hhrdi0p2rouj.apps.googleusercontent.com"
+    }
   }
 }
