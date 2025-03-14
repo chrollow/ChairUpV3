@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import FormContainer from './Shared/FormContainer';
 import Input from './Shared/Input';
+import { registerUser } from '../Context/Actions/Auth.actions';
 
 var { width } = Dimensions.get("window");
 
@@ -101,40 +102,23 @@ const RegisterScreen = ({ navigation }) => {
     }
     
     try {
-      // Get existing users or initialize empty array
-      const existingUsersJson = await AsyncStorage.getItem('registeredUsers');
-      const existingUsers = existingUsersJson ? JSON.parse(existingUsersJson) : [];
-      
-      // Check if email already exists
-      const emailExists = existingUsers.some(user => user.email.toLowerCase() === email.toLowerCase());
-      if (emailExists) {
-        setError('Email already registered');
-        return;
-      }
-      
-      // Create new user object (including password for authentication)
-      const newUser = {
+      const result = await registerUser({
         name,
         email,
         phone,
-        password, // In a real app, this would be hashed
+        password,
         profileImage: image
-      };
+      });
       
-      // Add to users array and save back to storage
-      existingUsers.push(newUser);
-      await AsyncStorage.setItem('registeredUsers', JSON.stringify(existingUsers));
-      
-      Alert.alert(
-        "Registration Successful",
-        "You have successfully registered!",
-        [
-          { text: "OK", onPress: () => {
-            // Navigate back to Login screen instead of directly to Home
-            navigation.navigate('Login');
-          }}
-        ]
-      );
+      if (result.success) {
+        Alert.alert(
+          "Registration Successful",
+          "You have successfully registered!",
+          [{ text: "OK", onPress: () => navigation.navigate('Login') }]
+        );
+      } else {
+        setError(result.message);
+      }
     } catch (error) {
       Alert.alert('Error', 'Registration failed. Please try again.');
     }

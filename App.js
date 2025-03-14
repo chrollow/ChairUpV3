@@ -8,6 +8,7 @@ import RegisterScreen from './screens/RegisterScreen';
 import MainNavigator from './Navigation/MainNavigator';
 import AuthGlobal, { AuthContext } from './Context/Store/AuthGlobal';
 import ProductProvider from './Context/Store/ProductGlobal';
+import * as SecureStore from 'expo-secure-store';
 
 const Stack = createStackNavigator();
 
@@ -22,14 +23,13 @@ const AppNavigator = () => {
     const bootstrapAsync = async () => {
       let token = null;
       try {
-        token = await AsyncStorage.getItem('userToken');
+        token = await SecureStore.getItemAsync('userToken');
       } catch (e) {
         console.log('Failed to get token', e);
       }
       setUserToken(token);
       if (token) {
-        // Update the auth context if we have a token
-        const userData = await AsyncStorage.getItem('userData');
+        const userData = await SecureStore.getItemAsync('userData');
         if (userData) {
           const parsedUserData = JSON.parse(userData);
           dispatch({
