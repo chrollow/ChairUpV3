@@ -9,7 +9,8 @@ import {
   SafeAreaView,
   TextInput,
   Modal,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  ScrollView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { ProductContext } from '../../Context/Store/ProductGlobal';
@@ -24,6 +25,13 @@ const ProductsScreen = ({ navigation }) => {
   const [showDrawer, setShowDrawer] = useState(false);
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(500);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [activeFilters, setActiveFilters] = useState(0);
+  
+  // Extract all unique categories from products
+  const allCategories = stateProducts.products && stateProducts.products.length > 0 
+    ? [...new Set(stateProducts.products.map(p => p.category).filter(Boolean))]
+    : ['Office', 'Gaming', 'Living Room', 'Dining', 'Outdoor'];
   
   // Find product price range
   const productMaxPrice = stateProducts.products && stateProducts.products.length > 0 ? 
@@ -37,7 +45,7 @@ const ProductsScreen = ({ navigation }) => {
     setMaxPrice(productMaxPrice);
   }, [productMinPrice, productMaxPrice]);
   
-  // Filter products based on search query and price range
+  // Filter products based on search query, price range, and categories
   useEffect(() => {
     if (!stateProducts.products) return;
     
@@ -50,11 +58,23 @@ const ProductsScreen = ({ navigation }) => {
       const itemPrice = item.price || 0;
       const matchesPrice = itemPrice >= minPrice && itemPrice <= maxPrice;
       
-      return matchesSearch && matchesPrice;
+      // Check if category matches (if categories are selected)
+      const matchesCategory = selectedCategories.length === 0 || 
+        (item.category && selectedCategories.includes(item.category));
+      
+      return matchesSearch && matchesPrice && matchesCategory;
     });
     
     setFilteredProducts(filtered);
-  }, [searchQuery, minPrice, maxPrice, stateProducts.products]);
+    
+    // Count active filters
+    let count = 0;
+    if (searchQuery) count++;
+    if (minPrice > productMinPrice || maxPrice < productMaxPrice) count++;
+    if (selectedCategories.length > 0) count++;
+    setActiveFilters(count);
+    
+  }, [searchQuery, minPrice, maxPrice, selectedCategories, stateProducts.products]);
   
   const toggleFilters = () => {
     setShowFilters(!showFilters);
@@ -68,6 +88,15 @@ const ProductsScreen = ({ navigation }) => {
     setSearchQuery('');
     setMinPrice(productMinPrice);
     setMaxPrice(productMaxPrice);
+    setSelectedCategories([]);
+  };
+  
+  const toggleCategory = (category) => {
+    if (selectedCategories.includes(category)) {
+      setSelectedCategories(selectedCategories.filter(c => c !== category));
+    } else {
+      setSelectedCategories([...selectedCategories, category]);
+    }
   };
 
   const renderProductItem = ({ item }) => (
@@ -79,6 +108,11 @@ const ProductsScreen = ({ navigation }) => {
         source={{ uri: item.image }} 
         style={styles.productImage}
       />
+      {item.category && (
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryText}>{item.category}</Text>
+        </View>
+      )}
       <View style={styles.productInfo}>
         <Text style={styles.productName}>{item.name}</Text>
         <Text style={styles.productPrice}>${item.price}</Text>
@@ -124,10 +158,58 @@ const ProductsScreen = ({ navigation }) => {
           ) : null}
         </View>
         
-        <TouchableOpacity style={styles.filterButton} onPress={toggleFilters}>
+        <TouchableOpacity 
+          style={styles.filterButton} 
+          onPress={toggleFilters}
+        >
+          {activeFilters > 0 && (
+            <View style={styles.filterBadge}>
+              <Text style={styles.filterBadgeText}>{activeFilters}</Text>
+            </View>
+          )}
           <Ionicons name="filter" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
+      
+      {/* Display selected filters as chips */}
+      {(selectedCategories.length > 0 || minPrice > productMinPrice || maxPrice < productMaxPrice) && (
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.filtersChipsContainer}
+          contentContainerStyle={styles.filtersChipsContent}
+        >
+          {selectedCategories.map(category => (
+            <TouchableOpacity
+              key={category}
+              style={styles.filterChip}
+              onPress={() => toggleCategory(category)}
+            >
+              <Text style={styles.filterChipText}>{category}</Text>
+              <Ionicons name="close-circle" size={16} color="#4a6da7" />
+            </TouchableOpacity>
+          ))}
+          
+          {(minPrice > productMinPrice || maxPrice < productMaxPrice) && (
+            <TouchableOpacity
+              style={styles.filterChip}
+              onPress={toggleFilters}
+            >
+              <Text style={styles.filterChipText}>
+                Price: ${Math.round(minPrice)} - ${Math.round(maxPrice)}
+              </Text>
+              <Ionicons name="options-outline" size={16} color="#4a6da7" />
+            </TouchableOpacity>
+          )}
+          
+          <TouchableOpacity
+            style={styles.clearFilterChip}
+            onPress={handleResetFilters}
+          >
+            <Text style={styles.clearFilterText}>Clear All</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      )}
       
       {filteredProducts.length > 0 ? (
         <FlatList
@@ -159,12 +241,39 @@ const ProductsScreen = ({ navigation }) => {
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Filter</Text>
+                  <Text style={styles.modalTitle}>Filters</Text>
                   <TouchableOpacity onPress={() => setShowFilters(false)}>
                     <Ionicons name="close" size={24} color="#333" />
                   </TouchableOpacity>
                 </View>
                 
+                {/* Categories section */}
+                <View style={styles.filterSection}>
+                  <Text style={styles.filterLabel}>Categories</Text>
+                  <View style={styles.categoriesContainer}>
+                    {allCategories.map(category => (
+                      <TouchableOpacity
+                        key={category}
+                        style={[
+                          styles.categoryButton,
+                          selectedCategories.includes(category) && styles.selectedCategoryButton
+                        ]}
+                        onPress={() => toggleCategory(category)}
+                      >
+                        <Text 
+                          style={[
+                            styles.categoryButtonText,
+                            selectedCategories.includes(category) && styles.selectedCategoryText
+                          ]}
+                        >
+                          {category}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+                
+                {/* Price Range section */}
                 <View style={styles.filterSection}>
                   <Text style={styles.filterLabel}>Price Range</Text>
                   <View style={styles.priceLabels}>
@@ -204,13 +313,13 @@ const ProductsScreen = ({ navigation }) => {
                     style={[styles.actionButton, styles.resetFilterButton]}
                     onPress={handleResetFilters}
                   >
-                    <Text style={styles.resetFilterText}>Reset</Text>
+                    <Text style={styles.resetFilterText}>Reset All</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                     style={[styles.actionButton, styles.applyButton]}
                     onPress={() => setShowFilters(false)}
                   >
-                    <Text style={styles.applyText}>Apply</Text>
+                    <Text style={styles.applyText}>Apply Filters</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -245,7 +354,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 15,
+    marginBottom: 10,
   },
   searchContainer: {
     flex: 1,
@@ -273,6 +382,55 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  filterBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#ff6b6b',
+    borderRadius: 10,
+    width: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  filterBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  filtersChipsContainer: {
+    paddingHorizontal: 10,
+    marginBottom: 10,
+  },
+  filtersChipsContent: {
+    paddingHorizontal: 10,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e6f0ff',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginRight: 8,
+  },
+  filterChipText: {
+    color: '#4a6da7',
+    marginRight: 5,
+  },
+  clearFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderColor: '#ff6b6b',
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  clearFilterText: {
+    color: '#ff6b6b',
+  },
   productList: {
     paddingHorizontal: 10,
     paddingBottom: 20,
@@ -288,6 +446,20 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     overflow: 'hidden',
+  },
+  categoryBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    backgroundColor: 'rgba(74, 109, 167, 0.8)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  categoryText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   productImage: {
     height: 150,
@@ -347,6 +519,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 20,
+    maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -365,6 +538,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 15,
+  },
+  categoriesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  categoryButton: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    margin: 4,
+  },
+  selectedCategoryButton: {
+    backgroundColor: '#4a6da7',
+    borderColor: '#4a6da7',
+  },
+  categoryButtonText: {
+    color: '#333',
+  },
+  selectedCategoryText: {
+    color: '#fff',
   },
   slider: {
     height: 40,
