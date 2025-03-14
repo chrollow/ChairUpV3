@@ -14,11 +14,11 @@ const MainNavigator = () => {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
-          if (route.name === 'Home') {
+          if (route.name === 'HomeTab') {
             iconName = focused ? 'home' : 'home-outline';
           } else if (route.name === 'ProductNavigator') {
             iconName = focused ? 'grid' : 'grid-outline';
-          } else if (route.name === 'Profile') {
+          } else if (route.name === 'ProfileTab') {
             iconName = focused ? 'person' : 'person-outline';
           }
 
@@ -29,10 +29,10 @@ const MainNavigator = () => {
       })}
     >
       <Tab.Screen 
-        name="Home" 
+        name="HomeTab" 
         component={HomeScreen} 
         options={{ 
-          headerShown: false,
+          headerShown: true,
           title: 'Home'
         }}
       />
@@ -40,14 +40,17 @@ const MainNavigator = () => {
         name="ProductNavigator" 
         component={ProductNavigator} 
         options={{ 
-          headerShown: false,
+          headerShown: true,
           title: 'Chairs'
         }}
       />
       <Tab.Screen 
-        name="Profile" 
+        name="ProfileTab" 
         component={ProfileScreen} 
-        options={{ title: 'My Profile' }}
+        options={{ 
+          headerShown: true,
+          title: 'My Profile' 
+        }}
       />
     </Tab.Navigator>
   );

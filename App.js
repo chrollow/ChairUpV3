@@ -1,8 +1,8 @@
-// App.js
 import React, { useState, useEffect, useContext } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { View } from 'react-native';
 import LoginScreen from './screens/LoginScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import MainNavigator from './Navigation/MainNavigator';
@@ -105,12 +105,14 @@ const AppNavigator = () => {
 
 export default function App() {
   return (
-    <AuthGlobal>
-      <ProductProvider>
-        <NavigationContainer>
-          <AppNavigator />
-        </NavigationContainer>
-      </ProductProvider>
-    </AuthGlobal>
+    <View style={{ flex: 1 }}>
+      <AuthGlobal>
+        <ProductProvider>
+          <NavigationContainer>
+            <AppNavigator />
+          </NavigationContainer>
+        </ProductProvider>
+      </AuthGlobal>
+    </View>
   );
 }
