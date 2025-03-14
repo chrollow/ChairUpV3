@@ -5,7 +5,8 @@ const authMiddleware = require('../middleware/auth.middleware');
 
 router.post('/register', authController.register);
 router.post('/login', authController.login);
+router.post('/google', authController.googleAuth);
+router.post('/facebook', authController.facebookAuth);
 router.put('/profile', authMiddleware, authController.updateProfile);
-router.post('/google', authController.googleAuth); // Add this line
 
 module.exports = router;

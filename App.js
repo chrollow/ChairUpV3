@@ -18,6 +18,29 @@ const AppNavigator = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [userToken, setUserToken] = useState(null);
 
+  // Add this function to check auth status on app launch
+  const checkAuthStatus = async () => {
+    try {
+      const token = await SecureStore.getItemAsync('userToken');
+      const userData = await SecureStore.getItemAsync('userData');
+      
+      if (token && userData) {
+        dispatch({
+          type: 'SET_CURRENT_USER',
+          payload: {
+            isAuthenticated: true,
+            user: JSON.parse(userData)
+          }
+        });
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.log('Error checking auth status', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     // Check if user is already logged in
     const bootstrapAsync = async () => {
@@ -45,6 +68,7 @@ const AppNavigator = () => {
     };
 
     bootstrapAsync();
+    checkAuthStatus(); // Call this in useEffect at app startup
   }, [dispatch]);
 
   if (isLoading) {

@@ -19,6 +19,8 @@ function createTables() {
     password TEXT,
     phone TEXT,
     profile_image TEXT,
+    facebook_id TEXT,
+    google_id TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 }

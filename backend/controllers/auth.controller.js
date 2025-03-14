@@ -165,26 +165,26 @@ exports.updateProfile = (req, res) => {
 
 // Google login/register
 exports.googleAuth = async (req, res) => {
-  const { idToken } = req.body;
+  const { email, name, profileImage } = req.body;
+
+  if (!email) {
+    return res.status(400).send({ message: 'Email is required' });
+  }
 
   try {
-    const ticket = await client.verifyIdToken({
-      idToken,
-      audience: '562957089179-v0glkbdo2sc169prvf84hhrdi0p2rouj.apps.googleusercontent.com',
-    });
-
-    const payload = ticket.getPayload();
-    const { email, name, picture } = payload;
-
     // Check if user exists
-    const checkQuery = 'SELECT * FROM users WHERE email = ?';
-    db.get(checkQuery, [email], (err, user) => {
+    db.get('SELECT * FROM users WHERE email = ? OR google_id = ?', [email, email], (err, user) => {
       if (err) {
         return res.status(500).send({ message: err.message });
       }
 
       if (user) {
         // User exists, login
+        // Update profile image if provided
+        if (profileImage && profileImage !== user.profile_image) {
+          db.run('UPDATE users SET profile_image = ? WHERE id = ?', [profileImage, user.id]);
+        }
+
         const token = jwt.sign({ id: user.id }, JWT_SECRET, {
           expiresIn: 86400 // 24 hours
         });
@@ -195,16 +195,16 @@ exports.googleAuth = async (req, res) => {
             name: user.name,
             email: user.email,
             phone: user.phone,
-            profileImage: user.profile_image
+            profileImage: profileImage || user.profile_image
           },
           token
         });
       } else {
         // User doesn't exist, register
-        const insertQuery = `INSERT INTO users (name, email, profile_image) 
-                            VALUES (?, ?, ?)`;
+        const insertQuery = `INSERT INTO users (name, email, profile_image, google_id) 
+                            VALUES (?, ?, ?, ?)`;
 
-        db.run(insertQuery, [name, email, picture], function(err) {
+        db.run(insertQuery, [name, email, profileImage, email], function(err) {
           if (err) {
             return res.status(500).send({ message: err.message });
           }
@@ -219,7 +219,7 @@ exports.googleAuth = async (req, res) => {
               id: this.lastID,
               name,
               email,
-              profileImage: picture
+              profileImage: profileImage
             },
             token
           });
@@ -227,6 +227,80 @@ exports.googleAuth = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(400).send({ message: 'Invalid Google token' });
+    res.status(400).send({ message: 'Invalid Google login data' });
+  }
+};
+
+// Facebook login/register
+exports.facebookAuth = async (req, res) => {
+  const { email, name, profileImage, facebookId } = req.body;
+
+  if (!email && !facebookId) {
+    return res.status(400).send({ message: 'Email or Facebook ID is required' });
+  }
+
+  try {
+    // Check if user exists
+    db.get('SELECT * FROM users WHERE email = ? OR facebook_id = ?', 
+           [email, facebookId], (err, user) => {
+      if (err) {
+        return res.status(500).send({ message: err.message });
+      }
+
+      if (user) {
+        // User exists, login
+        // Update facebook_id if missing
+        if (facebookId && !user.facebook_id) {
+          db.run('UPDATE users SET facebook_id = ? WHERE id = ?', [facebookId, user.id]);
+        }
+        
+        // Update profile image if provided
+        if (profileImage && profileImage !== user.profile_image) {
+          db.run('UPDATE users SET profile_image = ? WHERE id = ?', [profileImage, user.id]);
+        }
+
+        const token = jwt.sign({ id: user.id }, JWT_SECRET, {
+          expiresIn: 86400 // 24 hours
+        });
+
+        return res.status(200).send({
+          user: {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone || null,
+            profileImage: profileImage || user.profile_image || null
+          },
+          token
+        });
+      } else {
+        // User doesn't exist, register
+        const insertQuery = `INSERT INTO users (name, email, profile_image, facebook_id) 
+                            VALUES (?, ?, ?, ?)`;
+
+        db.run(insertQuery, [name, email, profileImage, facebookId], function(err) {
+          if (err) {
+            return res.status(500).send({ message: err.message });
+          }
+
+          const token = jwt.sign({ id: this.lastID }, JWT_SECRET, {
+            expiresIn: 86400 // 24 hours
+          });
+
+          res.status(201).send({
+            message: "User registered via Facebook successfully!",
+            user: {
+              id: this.lastID,
+              name,
+              email,
+              profileImage: profileImage || null
+            },
+            token
+          });
+        });
+      }
+    });
+  } catch (error) {
+    res.status(400).send({ message: 'Invalid Facebook login data' });
   }
 };

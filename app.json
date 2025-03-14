@@ -13,7 +13,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.donnabaldoza.chairup"
     },
     "android": {
       "adaptiveIcon": {
@@ -23,7 +24,8 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
-      ]
+      ],
+      "package": "com.donnabaldoza.chairup"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -38,9 +40,11 @@
       "expo-secure-store"
     ],
     "scheme": "chairup",
+    "facebookScheme": "fb1196596965367294",
     "owner": "donn_baldoza",
     "extra": {
       "googleClientId": "562957089179-v0glkbdo2sc169prvf84hhrdi0p2rouj.apps.googleusercontent.com",
+      "facebookAppId": "1196596965367294",
       "eas": {
         "projectId": "7a47c849-db2e-4dba-af08-01a6f8497072"
       }
