@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { TouchableOpacity, Text, StyleSheet, View, Image, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { TouchableOpacity, Text, StyleSheet, Image, Alert } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
 import * as SecureStore from 'expo-secure-store';
@@ -9,71 +9,137 @@ import Constants from 'expo-constants';
 const API_URL = "http://192.168.1.39:3000/api";
 
 // Register for Google OAuth client ID
-// Visit: https://console.cloud.google.com/apis/credentials
 const GOOGLE_CLIENT_ID = "562957089179-v0glkbdo2sc169prvf84hhrdi0p2rouj.apps.googleusercontent.com";
 
+// This is critical for WebBrowser authentication
 WebBrowser.maybeCompleteAuthSession();
 
 const GoogleLogin = ({ onLoginSuccess }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  // Use proxy: true for Expo Go
+  // Configuration specific for Expo Go on physical devices
   const [request, response, promptAsync] = Google.useAuthRequest({
     expoClientId: GOOGLE_CLIENT_ID,
-    webClientId: GOOGLE_CLIENT_ID,
     androidClientId: GOOGLE_CLIENT_ID,
     iosClientId: GOOGLE_CLIENT_ID,
-    redirectUri: `https://auth.expo.io/@${Constants.expoConfig?.owner || 'donn_baldoza'}/ChairUp`,
+    webClientId: GOOGLE_CLIENT_ID,
+    responseType: "id_token",
+    // Use the Expo proxy service explicitly for development
+    redirectUri: `https://auth.expo.io/@donn_baldoza/chairup`,
     scopes: ['profile', 'email'],
-    proxy: true
+    useProxy: true,
   });
 
-  React.useEffect(() => {
+  // Log for debugging
+  useEffect(() => {
+    if (request) {
+      console.log("Auth request ready with redirect:", request.redirectUri);
+    } else {
+      console.log("Auth request not ready yet");
+    }
+    
+    if (response) {
+      console.log("Full response:", JSON.stringify(response));
+    }
+  }, [request, response]);
+
+  useEffect(() => {
+    console.log('Constants.linkingUri:', Constants.linkingUri);
+    console.log('Constants.experienceUrl:', Constants.experienceUrl);
+    console.log('Current redirectUri:', request?.redirectUri);
+  }, [request]);
+
+  // Handle the authentication response
+  useEffect(() => {
     if (response?.type === 'success') {
+      console.log("Auth success, handling login...");
       setIsLoading(true);
-      const { authentication } = response;
-      handleGoogleLogin(authentication.accessToken);
+      
+      // For id_token response type
+      if (response.params?.id_token) {
+        handleIdTokenAuth(response.params.id_token);
+      } 
+      // For token response type
+      else if (response.authentication?.accessToken) {
+        handleAccessTokenAuth(response.authentication.accessToken);
+      } 
+      else {
+        console.error("No token found in response");
+        setIsLoading(false);
+        Alert.alert("Login Error", "No authentication token received");
+      }
     } else if (response?.type === 'error') {
-      Alert.alert('Authentication error', response.error?.message || 'An error occurred during sign in');
+      console.error("Auth error:", response.error);
       setIsLoading(false);
+      Alert.alert("Authentication Error", 
+        `Google sign-in failed: ${response.error?.description || response.error?.message || 'Unknown error'}`);
     }
   }, [response]);
 
-  const handleGoogleLogin = async (accessToken) => {
+  // Handle authentication with ID token
+  const handleIdTokenAuth = async (idToken) => {
     try {
-      console.log('Access token obtained:', accessToken);
+      console.log("Handling ID token auth");
       
-      // Get user data from Google
+      // Send to your backend
+      const apiResponse = await axios.post(`${API_URL}/auth/google`, {
+        idToken: idToken
+      });
+      
+      // Save auth data
+      await SecureStore.setItemAsync('userToken', apiResponse.data.token);
+      await SecureStore.setItemAsync('userData', JSON.stringify(apiResponse.data.user));
+      
+      // Call success callback
+      if (onLoginSuccess) {
+        onLoginSuccess(apiResponse.data.user);
+      }
+    } catch (error) {
+      console.error('Google ID token auth error:', error);
+      Alert.alert('Login Error', 'Could not complete authentication. Please try again.');
+      setError(error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle authentication with access token
+  const handleAccessTokenAuth = async (accessToken) => {
+    try {
+      console.log('Token received, fetching user info');
+      
+      // Get user info with the access token
       const userInfoResponse = await fetch('https://www.googleapis.com/userinfo/v2/me', {
         headers: { Authorization: `Bearer ${accessToken}` }
       });
       
       const userData = await userInfoResponse.json();
-      console.log('User data received:', userData);
+      console.log('Google user data received:', userData.email);
       
-      // Send to your backend
-      const response = await axios.post(`${API_URL}/auth/google`, {
+      if (!userData.email) {
+        throw new Error('Email not received from Google');
+      }
+      
+      // Send to backend
+      const apiResponse = await axios.post(`${API_URL}/auth/google`, {
         email: userData.email,
         name: userData.name,
         profileImage: userData.picture
       });
       
-      // Handle login success
-      const { token, user } = response.data;
-      
-      // Store token securely
-      await SecureStore.setItemAsync('userToken', token);
-      
-      // Store user data
-      await SecureStore.setItemAsync('userData', JSON.stringify(user));
+      // Save auth data
+      await SecureStore.setItemAsync('userToken', apiResponse.data.token);
+      await SecureStore.setItemAsync('userData', JSON.stringify(apiResponse.data.user));
       
       // Call success callback
       if (onLoginSuccess) {
-        onLoginSuccess(user);
+        onLoginSuccess(apiResponse.data.user);
       }
     } catch (error) {
-      console.error('Google login error:', error);
-      Alert.alert('Login Error', 'Failed to sign in with Google');
+      console.error('Google auth error:', error);
+      Alert.alert('Login Error', 'Could not complete authentication. Please try again.');
+      setError(error.message);
     } finally {
       setIsLoading(false);
     }
@@ -84,7 +150,15 @@ const GoogleLogin = ({ onLoginSuccess }) => {
       style={styles.googleButton}
       onPress={() => {
         setIsLoading(true);
-        promptAsync();
+        setError(null);
+        try {
+          console.log("Starting Google authentication...");
+          promptAsync();
+        } catch (error) {
+          console.error('Error starting auth:', error);
+          setIsLoading(false);
+          Alert.alert('Authentication Error', 'Could not start Google login');
+        }
       }}
       disabled={!request || isLoading}
     >

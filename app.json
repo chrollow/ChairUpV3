@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "ChairUp",
-    "slug": "ChairUp",
+    "slug": "chairup",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -19,7 +19,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -36,7 +40,10 @@
     "scheme": "chairup",
     "owner": "donn_baldoza",
     "extra": {
-      "googleClientId": "562957089179-v0glkbdo2sc169prvf84hhrdi0p2rouj.apps.googleusercontent.com"
+      "googleClientId": "562957089179-v0glkbdo2sc169prvf84hhrdi0p2rouj.apps.googleusercontent.com",
+      "eas": {
+        "projectId": "7a47c849-db2e-4dba-af08-01a6f8497072"
+      }
     }
   }
 }

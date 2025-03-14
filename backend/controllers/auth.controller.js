@@ -1,9 +1,11 @@
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const db = require('../config/db');
+const { OAuth2Client } = require('google-auth-library');
 
 // JWT secret key - in production, use environment variables
 const JWT_SECRET = 'your-secret-key';
+const client = new OAuth2Client('562957089179-v0glkbdo2sc169prvf84hhrdi0p2rouj.apps.googleusercontent.com');
 
 // Register a new user
 exports.register = (req, res) => {
@@ -162,61 +164,69 @@ exports.updateProfile = (req, res) => {
 };
 
 // Google login/register
-exports.googleAuth = (req, res) => {
-  const { email, name, profileImage } = req.body;
+exports.googleAuth = async (req, res) => {
+  const { idToken } = req.body;
 
-  if (!email) {
-    return res.status(400).send({ message: "Email is required" });
-  }
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken,
+      audience: '562957089179-v0glkbdo2sc169prvf84hhrdi0p2rouj.apps.googleusercontent.com',
+    });
 
-  // Check if user exists
-  const checkQuery = 'SELECT * FROM users WHERE email = ?';
-  db.get(checkQuery, [email], (err, user) => {
-    if (err) {
-      return res.status(500).send({ message: err.message });
-    }
-    
-    if (user) {
-      // User exists, login
-      const token = jwt.sign({ id: user.id }, JWT_SECRET, {
-        expiresIn: 86400 // 24 hours
-      });
+    const payload = ticket.getPayload();
+    const { email, name, picture } = payload;
 
-      return res.status(200).send({
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone,
-          profileImage: user.profile_image
-        },
-        token
-      });
-    } else {
-      // User doesn't exist, register
-      const insertQuery = `INSERT INTO users (name, email, profile_image) 
-                          VALUES (?, ?, ?)`;
-      
-      db.run(insertQuery, [name, email, profileImage], function(err) {
-        if (err) {
-          return res.status(500).send({ message: err.message });
-        }
+    // Check if user exists
+    const checkQuery = 'SELECT * FROM users WHERE email = ?';
+    db.get(checkQuery, [email], (err, user) => {
+      if (err) {
+        return res.status(500).send({ message: err.message });
+      }
 
-        const token = jwt.sign({ id: this.lastID }, JWT_SECRET, {
+      if (user) {
+        // User exists, login
+        const token = jwt.sign({ id: user.id }, JWT_SECRET, {
           expiresIn: 86400 // 24 hours
         });
 
-        res.status(201).send({
-          message: "User registered via Google successfully!",
+        return res.status(200).send({
           user: {
-            id: this.lastID,
-            name,
-            email,
-            profileImage
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+            profileImage: user.profile_image
           },
           token
         });
-      });
-    }
-  });
+      } else {
+        // User doesn't exist, register
+        const insertQuery = `INSERT INTO users (name, email, profile_image) 
+                            VALUES (?, ?, ?)`;
+
+        db.run(insertQuery, [name, email, picture], function(err) {
+          if (err) {
+            return res.status(500).send({ message: err.message });
+          }
+
+          const token = jwt.sign({ id: this.lastID }, JWT_SECRET, {
+            expiresIn: 86400 // 24 hours
+          });
+
+          res.status(201).send({
+            message: "User registered via Google successfully!",
+            user: {
+              id: this.lastID,
+              name,
+              email,
+              profileImage: picture
+            },
+            token
+          });
+        });
+      }
+    });
+  } catch (error) {
+    res.status(400).send({ message: 'Invalid Google token' });
+  }
 };
