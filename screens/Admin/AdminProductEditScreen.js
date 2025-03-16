@@ -30,8 +30,7 @@ const AdminProductEditScreen = ({ route, navigation }) => {
   const [category, setCategory] = useState(product?.category || 'Office');
   const [description, setDescription] = useState(product?.description || '');
   const [image, setImage] = useState(product?.image || null);
-  const [rating, setRating] = useState(product?.rating ? product.rating.toString() : '0');
-  const [numReviews, setNumReviews] = useState(product?.numReviews ? product.numReviews.toString() : '0');
+  const [stockQuantity, setStockQuantity] = useState(product?.stockQuantity ? product.stockQuantity.toString() : '0');
   const [loading, setLoading] = useState(false);
   
   // Predefined categories
@@ -87,6 +86,10 @@ const AdminProductEditScreen = ({ route, navigation }) => {
     if (!price.trim() || isNaN(parseFloat(price)) || parseFloat(price) <= 0) 
       return "Valid price is required";
     if (!category) return "Category is required";
+    if (!description.trim()) return "Description is required";
+    if (!image) return "Product image is required";
+    if (!stockQuantity.trim() || isNaN(parseInt(stockQuantity)) || parseInt(stockQuantity) < 0)
+      return "Valid stock quantity is required";
     return null;
   };
 
@@ -107,14 +110,14 @@ const AdminProductEditScreen = ({ route, navigation }) => {
         category,
         description,
         image,
-        rating: parseFloat(rating) || 0,
-        numReviews: parseInt(numReviews, 10) || 0,
+        stockQuantity: parseInt(stockQuantity, 10) || 0,  // Ensure stockQuantity is parsed as int
       };
+      
+      console.log("Saving product with data:", productData); // Log data to verify
       
       let response;
       
       if (isEditing) {
-        // Update existing product
         response = await axios.put(`${API_URL}/products/${product.id}`, productData, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -122,7 +125,6 @@ const AdminProductEditScreen = ({ route, navigation }) => {
           },
         });
       } else {
-        // Create new product
         response = await axios.post(`${API_URL}/products`, productData, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -131,13 +133,15 @@ const AdminProductEditScreen = ({ route, navigation }) => {
         });
       }
       
+      console.log("Response from API:", response.data); // Log response to verify
+      
       Alert.alert(
         "Success",
         isEditing ? "Product updated successfully" : "Product created successfully",
         [{ text: "OK", onPress: () => navigation.goBack() }]
       );
     } catch (error) {
-      console.error(error);
+      console.error("API Error:", error.response?.data || error.message);
       Alert.alert("Error", isEditing ? "Failed to update product" : "Failed to create product");
     } finally {
       setLoading(false);
@@ -217,28 +221,15 @@ const AdminProductEditScreen = ({ route, navigation }) => {
         />
       </View>
       
-      <View style={styles.formRow}>
-        <View style={styles.formGroupHalf}>
-          <Text style={styles.label}>Rating</Text>
-          <TextInput
-            style={styles.input}
-            value={rating}
-            onChangeText={setRating}
-            placeholder="0-5"
-            keyboardType="decimal-pad"
-          />
-        </View>
-        
-        <View style={styles.formGroupHalf}>
-          <Text style={styles.label}>Reviews</Text>
-          <TextInput
-            style={styles.input}
-            value={numReviews}
-            onChangeText={setNumReviews}
-            placeholder="Number of reviews"
-            keyboardType="number-pad"
-          />
-        </View>
+      <View style={styles.formGroup}>
+        <Text style={styles.label}>Stock Quantity</Text>
+        <TextInput
+          style={styles.input}
+          value={stockQuantity}
+          onChangeText={setStockQuantity}
+          placeholder="Available stock quantity"
+          keyboardType="number-pad"
+        />
       </View>
       
       <TouchableOpacity 
@@ -309,13 +300,6 @@ const styles = StyleSheet.create({
   },
   formGroup: {
     marginBottom: 16,
-  },
-  formRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  formGroupHalf: {
-    width: '48%',
   },
   label: {
     fontSize: 16,

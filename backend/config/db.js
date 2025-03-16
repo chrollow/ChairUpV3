@@ -32,8 +32,7 @@ function createTables() {
     category TEXT,
     description TEXT,
     image TEXT,
-    rating REAL DEFAULT 0,
-    numReviews INTEGER DEFAULT 0,
+    stockQuantity INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 }

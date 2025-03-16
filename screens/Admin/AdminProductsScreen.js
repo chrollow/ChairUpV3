@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import axios from 'axios';
 import * as SecureStore from 'expo-secure-store';
 import { AuthContext } from '../../Context/Store/AuthGlobal';
+import { useFocusEffect } from '@react-navigation/native';
 
 const API_URL = "http://192.168.1.39:3000/api";
 
@@ -21,15 +22,13 @@ const AdminProductsScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const { stateUser } = useContext(AuthContext);
   
-  useEffect(() => {
-    // Check if user is admin
-    if (!stateUser.isAuthenticated || !stateUser.user.isAdmin) {
-      navigation.navigate('HomeTab');
-      return;
-    }
-    
-    fetchProducts();
-  }, []);
+  // This will reload data every time the screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchProducts();
+      return () => {}; // cleanup function
+    }, [])
+  );
   
   const fetchProducts = async () => {
     try {
@@ -79,34 +78,49 @@ const AdminProductsScreen = ({ navigation }) => {
     );
   };
 
-  const renderProductItem = ({ item }) => (
-    <View style={styles.productItem}>
-      <TouchableOpacity 
-        style={styles.productInfo}
-        onPress={() => navigation.navigate('AdminProductEdit', { product: item })}
-      >
-        <Text style={styles.productName}>{item.name}</Text>
-        <Text style={styles.productPrice}>${item.price}</Text>
-        <Text style={styles.productCategory}>{item.category}</Text>
-      </TouchableOpacity>
-      
-      <View style={styles.actions}>
+  const renderProductItem = ({ item }) => {
+    // Ensure stockQuantity is converted to a number
+    const stockQty = Number(item.stockQuantity || 0);
+    
+    return (
+      <View style={styles.productItem}>
         <TouchableOpacity 
-          style={styles.editButton}
+          style={styles.productInfo}
           onPress={() => navigation.navigate('AdminProductEdit', { product: item })}
         >
-          <Ionicons name="create-outline" size={24} color="#4a6da7" />
+          <Text style={styles.productName}>{item.name}</Text>
+          <Text style={styles.productPrice}>${item.price}</Text>
+          <View style={styles.detailsRow}>
+            <Text style={styles.productCategory}>{item.category}</Text>
+            <Text style={[
+              styles.stockIndicator, 
+              stockQty > 0 ? styles.inStock : styles.outOfStock
+            ]}>
+              {stockQty > 0 ? 
+                `In Stock (${stockQty})` : 
+                'Out of Stock'}
+            </Text>
+          </View>
         </TouchableOpacity>
         
-        <TouchableOpacity 
-          style={styles.deleteButton}
-          onPress={() => deleteProduct(item.id)}
-        >
-          <Ionicons name="trash-outline" size={24} color="#ff6b6b" />
-        </TouchableOpacity>
+        <View style={styles.actions}>
+          <TouchableOpacity 
+            style={styles.editButton}
+            onPress={() => navigation.navigate('AdminProductEdit', { product: item })}
+          >
+            <Ionicons name="create-outline" size={24} color="#4a6da7" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.deleteButton}
+            onPress={() => deleteProduct(item.id)}
+          >
+            <Ionicons name="trash-outline" size={24} color="#ff6b6b" />
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -175,11 +189,32 @@ const styles = StyleSheet.create({
   productPrice: {
     fontSize: 14,
     color: '#4a6da7',
-    marginBottom: 2,
+    marginBottom: 4,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
   },
   productCategory: {
     fontSize: 12,
     color: '#666',
+  },
+  stockIndicator: {
+    fontSize: 12,
+    fontWeight: '500',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  inStock: {
+    backgroundColor: '#e6f7e6',
+    color: '#28a745',
+  },
+  outOfStock: {
+    backgroundColor: '#ffebeb',
+    color: '#dc3545',
   },
   actions: {
     flexDirection: 'row',
@@ -208,10 +243,10 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
-    fontSize: 16,
     color: '#666',
-    marginTop: 50,
-  },
+    marginTop: 20,
+    fontSize: 16,
+  }
 });
 
 export default AdminProductsScreen;

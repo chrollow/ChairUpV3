@@ -6,8 +6,10 @@ exports.getAllProducts = (req, res) => {
   
   db.all(query, [], (err, products) => {
     if (err) {
+      console.error("Database error:", err);
       return res.status(500).send({ message: err.message });
     }
+    console.log("Products retrieved:", products); // Log products to verify
     res.status(200).send(products);
   });
 };
@@ -31,15 +33,15 @@ exports.getProductById = (req, res) => {
 
 // Create product
 exports.createProduct = (req, res) => {
-  const { name, price, category, description, image, rating, numReviews } = req.body;
+  const { name, price, category, description, image, stockQuantity } = req.body;
   
   if (!name || !price) {
     return res.status(400).send({ message: "Product name and price are required" });
   }
   
   const query = `INSERT INTO products 
-    (name, price, category, description, image, rating, numReviews) 
-    VALUES (?, ?, ?, ?, ?, ?, ?)`;
+    (name, price, category, description, image, stockQuantity) 
+    VALUES (?, ?, ?, ?, ?, ?)`;
   
   db.run(query, [
     name, 
@@ -47,8 +49,7 @@ exports.createProduct = (req, res) => {
     category || 'Office', 
     description || '', 
     image || '', 
-    rating || 0, 
-    numReviews || 0
+    stockQuantity || 0  // Ensure stockQuantity is properly captured
   ], function(err) {
     if (err) {
       return res.status(500).send({ message: err.message });
@@ -68,7 +69,7 @@ exports.createProduct = (req, res) => {
 // Update product
 exports.updateProduct = (req, res) => {
   const { id } = req.params;
-  const { name, price, category, description, image, rating, numReviews } = req.body;
+  const { name, price, category, description, image, stockQuantity } = req.body;
   
   const query = `UPDATE products SET 
     name = COALESCE(?, name),
@@ -76,8 +77,7 @@ exports.updateProduct = (req, res) => {
     category = COALESCE(?, category),
     description = COALESCE(?, description),
     image = COALESCE(?, image),
-    rating = COALESCE(?, rating),
-    numReviews = COALESCE(?, numReviews)
+    stockQuantity = COALESCE(?, stockQuantity)
     WHERE id = ?`;
   
   db.run(query, [
@@ -86,8 +86,7 @@ exports.updateProduct = (req, res) => {
     category, 
     description, 
     image, 
-    rating,
-    numReviews,
+    stockQuantity !== undefined ? stockQuantity : null,  // Handle stockQuantity explicitly
     id
   ], function(err) {
     if (err) {
