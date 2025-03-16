@@ -21,6 +21,19 @@ function createTables() {
     profile_image TEXT,
     facebook_id TEXT,
     google_id TEXT,
+    is_admin INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`);
+
+  db.run(`CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    price REAL NOT NULL,
+    category TEXT,
+    description TEXT,
+    image TEXT,
+    rating REAL DEFAULT 0,
+    numReviews INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )`);
 }

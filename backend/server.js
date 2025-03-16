@@ -12,12 +12,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // Routes
 const authRoutes = require('./routes/auth.routes');
-// Comment out or remove the product routes import
-// const productRoutes = require('./routes/product.routes');
+const productRoutes = require('./routes/product.routes'); // Uncomment this
 
 app.use('/api/auth', authRoutes);
-// Comment out or remove this line
-// app.use('/api/products', productRoutes);
+app.use('/api/products', productRoutes); // Uncomment this
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to ChairUp API' });

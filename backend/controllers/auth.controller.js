@@ -85,7 +85,8 @@ exports.login = (req, res) => {
         name: user.name,
         email: user.email,
         phone: user.phone,
-        profileImage: user.profile_image
+        profileImage: user.profile_image,
+        isAdmin: user.is_admin === 1  // Add this line
       },
       token
     });
@@ -195,7 +196,8 @@ exports.googleAuth = async (req, res) => {
             name: user.name,
             email: user.email,
             phone: user.phone,
-            profileImage: profileImage || user.profile_image
+            profileImage: profileImage || user.profile_image,
+            isAdmin: user.is_admin === 1  // Add this line
           },
           token
         });
@@ -219,7 +221,8 @@ exports.googleAuth = async (req, res) => {
               id: this.lastID,
               name,
               email,
-              profileImage: profileImage
+              profileImage: profileImage,
+              isAdmin: false  // Add this line
             },
             token
           });
@@ -269,7 +272,8 @@ exports.facebookAuth = async (req, res) => {
             name: user.name,
             email: user.email,
             phone: user.phone || null,
-            profileImage: profileImage || user.profile_image || null
+            profileImage: profileImage || user.profile_image || null,
+            isAdmin: user.is_admin === 1  // Add this line
           },
           token
         });
@@ -293,7 +297,8 @@ exports.facebookAuth = async (req, res) => {
               id: this.lastID,
               name,
               email,
-              profileImage: profileImage || null
+              profileImage: profileImage || null,
+              isAdmin: false  // Add this line
             },
             token
           });
